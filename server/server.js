@@ -88,10 +88,9 @@ server.delete('/api/v1/users/:userId', async (req, res) => {
   res.json({ status: 'success', id: +userId })  
 })  
 
-server.delete('/api/v1/users', async (req, res,next) => {
+server.delete('/api/v1/users', async (req, res) => {
   await unlink(`${__dirname}/test.json`)
-  next()
-
+  res.json({ status: 'successs'})
 }) 
 
 
