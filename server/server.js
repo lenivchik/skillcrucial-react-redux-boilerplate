@@ -30,26 +30,71 @@ let connections = []
 
 const port = process.env.PORT || 8090
 const server = express()
+const { readFile, writeFile ,unlink} = require('fs').promises;
+
+const Headers = (req, res, next) =>{
+  res.set('x-skillcrucial-user', '880c92c6-3cf5-45bd-9160-7524a11ec7cb')  
+  res.set('Access-Control-Expose-Headers', 'X-SKILLCRUCIAL-USER')
+  next() 
+}
 
 const middleware = [
   cors(),
   express.static(path.resolve(__dirname, '../dist/assets')),
   bodyParser.urlencoded({ limit: '50mb', extended: true, parameterLimit: 50000 }),
   bodyParser.json({ limit: '50mb', extended: true }),
-  cookieParser()
+  cookieParser(),
+  Headers
 ]
 
 middleware.forEach((it) => server.use(it))
 
-server.get('/api/v1/users', (req, res) => {  
-  res.json({ name: 'ghj' })  
+async function ReadFile() {
+  return readFile(`${__dirname}/test.json`, { encoding: "utf8" })  
+  .then((text) => {  
+    return JSON.parse(text)
+  })  
+  .catch(async() => {  
+    const text = await axios("https://jsonplaceholder.typicode.com/users").then((result)=> result.data)
+    await writeFile(`${__dirname}/test.json`, JSON.stringify(text), { encoding: "utf8" });  
+    return text
+  })  
+}
+
+server.get('/api/v1/users', async (req, res) => {
+  res.json(await ReadFile())  
 })  
 
-server.get('/api/v1/users/take/:number', async (req, res) => {  
-  const { number } = req.params  
-  const { data: users } = await axios('https://jsonplaceholder.typicode.com/users')  
-  res.json(users.slice(0, +number))  
-})
+server.post('/api/v1/users', async (req, res) => {
+  const info = req.body
+  const obj = await ReadFile()
+  info.id = obj[obj.length - 1].id + 1
+  await writeFile(`${__dirname}/test.json`, JSON.stringify([...obj,info]), { encoding: "utf8" });  
+  res.json({ status: 'success', id: info.id })  
+})  
+
+server.patch('/api/v1/users/:userId', async (req, res) => {
+  const {userId} = req.params
+  const info = req.body
+  const arr = await ReadFile()
+  await writeFile(`${__dirname}/test.json`, JSON.stringify(arr.map((it) => it.id === +userId ? {...it, ...info} : it)), { encoding: "utf8" });  
+  res.json({ status: 'success', id: info.id })  
+})  
+
+server.delete('/api/v1/users/:userId', async (req, res) => {
+  const {userId} = req.params
+  const arr = await ReadFile()
+  await writeFile(`${__dirname}/test.json`, JSON.stringify(arr.filter((it) => it.id !== +userId)), { encoding: "utf8" });  
+  res.json({ status: 'success', id: +userId })  
+})  
+
+server.delete('/api/v1/users', async (req, res,next) => {
+  await unlink(`${__dirname}/test.json`)
+  next()
+
+}) 
+
+
 
 server.use('/api/', (req, res) => {
   res.status(404)
