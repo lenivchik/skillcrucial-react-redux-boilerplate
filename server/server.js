@@ -5,7 +5,7 @@ import bodyParser from 'body-parser'
 import sockjs from 'sockjs'
 import { renderToStaticNodeStream } from 'react-dom/server'
 import React from 'react'
-
+import axios from 'axios' 
 import cookieParser from 'cookie-parser'
 import config from './config'
 import Html from '../client/html'
@@ -41,10 +41,21 @@ const middleware = [
 
 middleware.forEach((it) => server.use(it))
 
+server.get('/api/v1/users', (req, res) => {  
+  res.json({ name: 'ghj' })  
+})  
+
+server.get('/api/v1/users/take/:number', async (req, res) => {  
+  const { number } = req.params  
+  const { data: users } = await axios('https://jsonplaceholder.typicode.com/users')  
+  res.json(users.slice(0, +number))  
+})
+
 server.use('/api/', (req, res) => {
   res.status(404)
   res.end()
 })
+
 
 const [htmlStart, htmlEnd] = Html({
   body: 'separator',
